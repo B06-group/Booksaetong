@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { NextPage } from 'next';
 import KakaoMap from '@/components/common/KakaoMap';
 import Image from 'next/image';
@@ -8,6 +8,7 @@ import { supabase } from '@/contexts/supabase.context';
 import { uuid } from 'uuidv4';
 import { useUserStore } from '@/zustand/userStore';
 import { useRouter } from 'next/navigation';
+import { Notification } from '@/components/common/Alert';
 
 const PostPage: NextPage = () => {
   const router = useRouter();
@@ -20,6 +21,8 @@ const PostPage: NextPage = () => {
   const [markerPosition, setMarkerPosition] = useState({ latitude: 0, longitude: 0 });
   const [address, setAddress] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [notification, setNotification] = useState({ message: '', type: '' });
+
   const { id } = useUserStore((state) => ({ id: state.id }));
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,12 +74,12 @@ const PostPage: NextPage = () => {
   };
 
   const handleSubmit = async () => {
-    if (!title) return alert('제목이 없습니다.');
-    if (!category) return alert('카테고리를 선택하세요.');
-    if (!price) return alert('금액이 없습니다.');
-    if (!contents) return alert('내용이 없습니다.');
-    if (images.length === 0) return alert('사진을 등록하세요.');
-    if (!address) return alert('주소가 없습니다.');
+    if (!title) return setNotification({ message: '제목이 없습니다.', type: 'error' });
+    if (!category) return setNotification({ message: '카테고리를 선택하세요.', type: 'error' });
+    if (!price) return setNotification({ message: '금액이 없습니다.', type: 'error' });
+    if (!contents) return setNotification({ message: '내용이 없습니다.', type: 'error' });
+    if (images.length === 0) return setNotification({ message: '사진을 등록하세요.', type: 'error' });
+    if (!address) return setNotification({ message: '주소가 없습니다.', type: 'error' });
 
     if (confirm('작성을 완료하시겠습니까?')) {
       try {
@@ -127,7 +130,7 @@ const PostPage: NextPage = () => {
 
         router.push('/');
       } catch (error) {
-        console.error('데이터 저장 중 오류 발생:', error.message);
+        console.error('데이터 저장 중 오류 발생:', onmessage);
       }
     } else {
       console.log('작성이 취소되었습니다.');
@@ -141,8 +144,12 @@ const PostPage: NextPage = () => {
     }
   };
 
+  const closeNotification = () => {
+    setNotification({ message: '', type: '' });
+  };
+
   return (
-    <div className="flex flex-col h-auto p-2 md:p-28">
+    <div className="flex flex-col h-20 p-2 md:p-28">
       <div className="flex-grow relative border-2 border-bg-main rounded-lg flex flex-col p-4 md:p-10">
         <div className="mb-6">
           <p className="text-xl font-bold text-gray-800">판매등록하기</p>
@@ -300,6 +307,7 @@ const PostPage: NextPage = () => {
           </button>
         </div>
       </div>
+      {notification.message && <Notification message={notification.message} onClose={closeNotification} />}
     </div>
   );
 };

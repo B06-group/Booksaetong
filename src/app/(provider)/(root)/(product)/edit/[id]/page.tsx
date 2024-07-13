@@ -7,10 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 import KakaoMap from '@/components/common/KakaoMap';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/zustand/userStore';
+import { Notification } from '@/components/common/Alert';
 
 const EditPage = ({ params }: { params: { id: string } }) => {
   const router = useRouter();
-  const productId = params.id; // 상품 ID를 파라미터에서 가져옴
+  const productId = params.id;
   const [images, setImages] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [title, setTitle] = useState('');
@@ -20,12 +21,12 @@ const EditPage = ({ params }: { params: { id: string } }) => {
   const [markerPosition, setMarkerPosition] = useState({ latitude: 0, longitude: 0 });
   const [address, setAddress] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [notification, setNotification] = useState({ message: '', type: '' });
 
   const { id } = useUserStore((state) => ({
     id: state.id
   }));
 
-  // 이미지 업로드 함수
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
@@ -35,7 +36,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
     }
   };
 
-  // 이미지 삭제 함수
   const handleImageClick = (index: number) => {
     const newImages = [...images];
     newImages.splice(index, 1);
@@ -60,27 +60,24 @@ const EditPage = ({ params }: { params: { id: string } }) => {
 
   const handleMarkerPositionChange = (position: { lat: number; lng: number; address: string }) => {
     setMarkerPosition({ latitude: position.lat, longitude: position.lng });
-    setAddress(position.address); // 주소 정보 업데이트
+    setAddress(position.address);
   };
 
-  // 폼 제출 처리
   const handleSubmit = async () => {
-    if (!title) return alert('제목이 없습니다.');
-    if (!category) return alert('카테고리를 선택하세요.');
-    if (!price) return alert('금액이 없습니다.');
-    if (!contents) return alert('내용이 없습니다.');
-    if (images.length === 0) return alert('사진을 등록하세요.');
-    if (!address) return alert('주소가 없습니다.');
+    if (!title) return setNotification({ message: '제목이 없습니다.', type: 'error' });
+    if (!category) return setNotification({ message: '카테고리를 선택하세요.', type: 'error' });
+    if (!price) return setNotification({ message: '금액이 없습니다.', type: 'error' });
+    if (!contents) return setNotification({ message: '내용이 없습니다.', type: 'error' });
+    if (images.length === 0) return setNotification({ message: '사진을 등록하세요.', type: 'error' });
+    if (!address) return setNotification({ message: '주소가 없습니다.', type: 'error' });
     if (title && category && price && contents && address && images.length > 0) {
       let imageUrls = images;
       if (selectedFiles.length > 0) {
-        // 새 이미지가 있을 경우 업로드
         imageUrls = await Promise.all(selectedFiles.map((file) => imageUpload(file)));
       }
 
       if (confirm('작성을 완료하시겠습니까?')) {
         try {
-          // 기존 상품 업데이트
           const { error: updateError } = await supabase
             .from('products')
             .update({
@@ -90,17 +87,17 @@ const EditPage = ({ params }: { params: { id: string } }) => {
               contents,
               latitude: markerPosition.latitude,
               longitude: markerPosition.longitude,
-              address
+              address: address
             })
-            .eq('id', productId);
 
+            .eq('id', productId);
+          console.log(address);
           if (updateError) {
             throw updateError;
           }
 
-          console.log('상품 데이터를 업데이트했습니다:', productId);
+          setNotification({ message: '상품 데이터가 성공적으로 업데이트되었습니다.', type: 'success' });
 
-          // 이미지 데이터 업로드 및 업데이트
           const imageUrls = await Promise.all(selectedFiles.map((file) => imageUpload(file)));
           if (imageUrls.length !== selectedFiles.length) {
             throw new Error('이미지 업로드 중 문제가 발생했습니다.');
@@ -125,7 +122,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
 
           console.log('이미지 데이터를 저장했습니다.');
 
-          // 필드 초기화
           setTitle('');
           setCategory('');
           setPrice('');
@@ -139,7 +135,7 @@ const EditPage = ({ params }: { params: { id: string } }) => {
           console.log('모든 데이터 저장을 완료했습니다.');
           router.push('/');
         } catch (error) {
-          console.error('데이터 저장 중 오류 발생:', error.message);
+          setNotification({ message: '데이터 저장 중 오류 발생: ' + onmessage, type: 'error' });
         }
       } else {
         console.log('작성이 취소되었습니다.');
@@ -147,7 +143,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
     }
   };
 
-  // 이미지 업로드 함수
   const imageUpload = async (selectedFile: File) => {
     const filePath = `products/${uuidv4()}_${Date.now()}`;
 
@@ -168,27 +163,27 @@ const EditPage = ({ params }: { params: { id: string } }) => {
   };
 
   useEffect(() => {
-    // 기존 상품 데이터 불러오기
     const fetchProductData = async () => {
       const { data, error } = await supabase.from('products').select('*').eq('id', productId).single();
 
-      if (id !== data.user_id) {
-        router.push('/login');
+      if (id !== null && id !== undefined && id !== data.user_id) {
+        router.push('/');
         return;
       }
 
       if (error) {
         console.error('상품 데이터 불러오기 오류:', error);
       } else {
+        console.log('불러온 상품 데이터:', data);
         setTitle(data.title);
         setCategory(data.category);
         setPrice(data.price.toString());
         setContents(data.contents);
         setMarkerPosition({ latitude: data.latitude, longitude: data.longitude });
         setAddress(data.address);
+        console.log(data);
       }
 
-      // 기존 이미지 데이터 불러오기
       const { data: imageData, error: imageError } = await supabase
         .from('product_images')
         .select('image_url')
@@ -204,24 +199,19 @@ const EditPage = ({ params }: { params: { id: string } }) => {
     fetchProductData();
   }, [productId, id]);
 
+  const closeNotification = () => {
+    setNotification({ message: '', type: '' });
+  };
   return (
     <div className="flex flex-col h-auto p-2 md:p-28">
-      {/* 전체 컨테이너 */}
-
       <div className="flex-grow relative border-2 border-bg-main rounded-lg flex flex-col p-4 md:p-10">
-        {/* 판매 등록 폼 컨테이너 */}
-
         <div className="mb-6">
-          {/* 제목 */}
           <p className="text-xl font-bold text-gray-800">내 글 수정하기</p>
         </div>
 
         <div className="flex flex-col md:flex-row md:space-x-6 space-y-6 md:space-y-0">
-          {/* 왼쪽 폼 필드 컨테이너 */}
-
           <div className="flex flex-col w-full md:w-1/2 space-y-4">
             <div className="flex flex-col space-y-1">
-              {/* 제목 입력 필드 */}
               <label htmlFor="title" className="text-sm text-gray-700">
                 제목
               </label>
@@ -235,7 +225,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
             </div>
 
             <div className="flex flex-col space-y-1">
-              {/* 카테고리 선택 필드 */}
               <label htmlFor="category" className="text-sm text-gray-700">
                 카테고리
               </label>
@@ -280,7 +269,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
             </div>
 
             <div className="flex flex-col space-y-1">
-              {/* 내용 입력 필드 */}
               <label htmlFor="contents" className="text-sm text-gray-700">
                 내용
               </label>
@@ -294,10 +282,8 @@ const EditPage = ({ params }: { params: { id: string } }) => {
             </div>
           </div>
 
-          {/* 오른쪽 이미지 업로드 및 지도 컨테이너 */}
           <div className="flex flex-col w-full md:w-1/2 space-y-4">
             <div className="flex flex-col space-y-1">
-              {/* 이미지 업로드 필드 */}
               <label htmlFor="image" className="text-sm text-gray-600">
                 사진 등록
               </label>
@@ -322,7 +308,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
               </div>
 
               <div className="mt-2 relative w-full">
-                {/* 이미지 미리보기 및 삭제 */}
                 {images.length > 4 && currentIndex > 0 && (
                   <button
                     onClick={handlePrevious}
@@ -360,9 +345,8 @@ const EditPage = ({ params }: { params: { id: string } }) => {
                   </button>
                 )}
                 <div className="mt-4">
-                  {/* 거래 희망 위치 */}
                   <p className="text-gray-600">거래 희망 위치</p>
-                  <KakaoMap onMarkerAddressChange={handleMarkerPositionChange} />
+                  <KakaoMap onMarkerAddressChange={handleMarkerPositionChange} dataAddress={address} />
                 </div>
               </div>
             </div>
@@ -370,7 +354,6 @@ const EditPage = ({ params }: { params: { id: string } }) => {
         </div>
 
         <div className="mt-6 flex justify-end">
-          {/* 작성 완료 버튼 */}
           <button
             onClick={handleSubmit}
             className="px-4 py-2 bg-main text-white rounded-md shadow hover:bg-hover focus:outline-none"
@@ -379,6 +362,7 @@ const EditPage = ({ params }: { params: { id: string } }) => {
           </button>
         </div>
       </div>
+      {notification.message && <Notification message={notification.message} onClose={closeNotification} />}
     </div>
   );
 };

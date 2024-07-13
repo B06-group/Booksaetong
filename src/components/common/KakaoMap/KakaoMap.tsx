@@ -11,11 +11,12 @@ type MarkerInfo = {
 
 type KakaoMapProps = {
   onMarkerAddressChange: (markerInfo: MarkerInfo) => void;
+  dataAddress?: string;
 };
 
-const KAKAO_SDK_URL = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services`;
+const KAKAO_SDK_URL = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&autoload=false`;
 
-const KakaoMap: React.FC<KakaoMapProps> = ({ onMarkerAddressChange }) => {
+const KakaoMap: React.FC<KakaoMapProps> = ({ onMarkerAddressChange, dataAddress }) => {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [center, setCenter] = useState({ lat: 37.566826, lng: 126.9786567 });
   const [markerPosition, setMarkerPosition] = useState({ lat: 37.566826, lng: 126.9786567 });
@@ -30,28 +31,30 @@ const KakaoMap: React.FC<KakaoMapProps> = ({ onMarkerAddressChange }) => {
     kakaoScript.src = KAKAO_SDK_URL;
     kakaoScript.async = true;
     kakaoScript.onload = () => {
-      const ps = new kakao.maps.services.Places();
-      if (!map || !address) return;
+      kakao.maps.load(() => {
+        const ps = new kakao.maps.services.Places();
+        if (!map || !address) return;
 
-      ps.keywordSearch(address, (data, status, _pagination) => {
-        if (status === kakao.maps.services.Status.OK) {
-          const bounds = new kakao.maps.LatLngBounds();
-          data.forEach((place) => bounds.extend(new kakao.maps.LatLng(Number(place.y), Number(place.x))));
-          map.setBounds(bounds);
+        ps.keywordSearch(dataAddress ? dataAddress : address, (data, status, _pagination) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const bounds = new kakao.maps.LatLngBounds();
+            data.forEach((place) => bounds.extend(new kakao.maps.LatLng(Number(place.y), Number(place.x))));
+            map.setBounds(bounds);
 
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const newCenter = {
-            lat: (sw.getLat() + ne.getLat()) / 2,
-            lng: (sw.getLng() + ne.getLng()) / 2
-          };
-          setCenter(newCenter);
-          setMarkerPosition(newCenter);
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            const newCenter = {
+              lat: (sw.getLat() + ne.getLat()) / 2,
+              lng: (sw.getLng() + ne.getLng()) / 2
+            };
+            setCenter(newCenter);
+            setMarkerPosition(newCenter);
 
-          geocodeAndSetMarkerAddress(newCenter.lat, newCenter.lng);
+            geocodeAndSetMarkerAddress(newCenter.lat, newCenter.lng);
 
-          map.setLevel(3);
-        }
+            map.setLevel(3);
+          }
+        });
       });
     };
 
