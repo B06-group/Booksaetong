@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { NextPage } from 'next';
 import Image from 'next/image';
 import { supabase } from '@/contexts/supabase.context';
 import { v4 as uuidv4 } from 'uuid';
@@ -73,6 +72,12 @@ const EditPage = ({ params }: { params: { id: string } }) => {
     if (images.length === 0) return alert('사진을 등록하세요.');
     if (!address) return alert('주소가 없습니다.');
     if (title && category && price && contents && address && images.length > 0) {
+      let imageUrls = images;
+      if (selectedFiles.length > 0) {
+        // 새 이미지가 있을 경우 업로드
+        imageUrls = await Promise.all(selectedFiles.map((file) => imageUpload(file)));
+      }
+
       if (confirm('작성을 완료하시겠습니까?')) {
         try {
           // 기존 상품 업데이트
@@ -100,13 +105,13 @@ const EditPage = ({ params }: { params: { id: string } }) => {
           if (imageUrls.length !== selectedFiles.length) {
             throw new Error('이미지 업로드 중 문제가 발생했습니다.');
           }
+          if (selectedFiles.length > 0) {
+            const { error: deleteError } = await supabase.from('product_images').delete().eq('product_id', productId);
 
-          const { error: deleteError } = await supabase.from('product_images').delete().eq('product_id', productId);
-
-          if (deleteError) {
-            throw deleteError;
+            if (deleteError) {
+              throw deleteError;
+            }
           }
-
           const imageInsertData = imageUrls.map((imageUrl) => ({
             product_id: productId,
             image_url: imageUrl
@@ -197,7 +202,7 @@ const EditPage = ({ params }: { params: { id: string } }) => {
     };
 
     fetchProductData();
-  }, [productId]);
+  }, [productId, id]);
 
   return (
     <div className="flex flex-col h-auto p-2 md:p-28">
