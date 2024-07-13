@@ -38,7 +38,7 @@ const KakaoMap: React.FC<KakaoMapProps> = ({ onMarkerAddressChange, initialPosit
         if (status === kakao.maps.services.Status.OK) {
           const bounds = new kakao.maps.LatLngBounds();
           data.forEach((place) => bounds.extend(new kakao.maps.LatLng(Number(place.y), Number(place.x))));
-          map.setBounds(bounds);
+          // map.setBounds(bounds);
 
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
@@ -49,11 +49,11 @@ const KakaoMap: React.FC<KakaoMapProps> = ({ onMarkerAddressChange, initialPosit
 
           if (initialPosition) {
             setCenter({ lat: initialPosition.latitude, lng: initialPosition.longitude });
-            setMarkerPosition({ lat: initialPosition.latitude, lng: initialPosition.longitude });
+            // setMarkerPosition({ lat: initialPosition.latitude, lng: initialPosition.longitude });
             geocodeAndSetMarkerAddress(initialPosition.latitude, initialPosition.longitude);
           } else {
             setCenter(newCenter);
-            setMarkerPosition(newCenter);
+            // setMarkerPosition(newCenter);
             geocodeAndSetMarkerAddress(newCenter.lat, newCenter.lng);
           }
           map.setLevel(3);
