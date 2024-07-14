@@ -1,7 +1,7 @@
 'use client';
 
 import AuthAlert from '@/components/Auth/AuthAlert';
-import useSearchStore, { searchStoreType } from '@/zustand/searchStore';
+import useSearchStore, { SearchStoreType } from '@/zustand/searchStore';
 import { useUserStore } from '@/zustand/userStore';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -26,7 +26,7 @@ function Header() {
   }));
 
   const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const { setKeyword } = useSearchStore<searchStoreType>((state) => state);
+  const { setKeyword } = useSearchStore<SearchStoreType>((state) => state);
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
